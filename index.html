@@ -1,1 +1,1204 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XChatAI Pro - Premium</title>
+    
+    <!-- Tailwind CSS с плагинами -->
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        ds: {
+                            bg: '#0b0b0c',
+                            panel: '#161618',
+                            border: '#242427',
+                            primary: '#3e5eff',
+                            primaryHover: '#2a46d9',
+                            text: '#f3f4f6',
+                            textMuted: '#9ca3af'
+                        }
+                    },
+                    animation: {
+                        'slide-up': 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'fade-in': 'fadeIn 0.2s ease-out forwards',
+                        'pulse-slow': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        slideUp: {
+                            '0%': { transform: 'translateY(15px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' }
+                        },
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
 
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <!-- Marked.js for Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <!-- Highlight.js for Code Formatting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+
+    <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+            outline: none !important;
+        }
+
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #2d2d30; border-radius: 99px; }
+        ::-webkit-scrollbar-thumb:hover { background: #3e3e42; }
+        
+        /* Стили инлайнового кода */
+        .prose :not(pre) > code { 
+            background-color: rgba(62, 94, 255, 0.12) !important; 
+            color: #5c7cff !important; 
+            padding: 0.15em 0.35em; 
+            border-radius: 0.25rem; 
+            font-size: 0.85em; 
+            font-weight: 500;
+        }
+        .prose :not(pre) > code::before, .prose :not(pre) > code::after {
+            content: "" !important;
+        }
+
+        /* Code Block Wrapper */
+        .code-block-wrapper { margin-top: 1.25em; margin-bottom: 1.25em; border-radius: 0.75rem; overflow: hidden; border: 1px solid #242427; box-shadow: 0 4px 12px rgba(0,0,0,0.25); }
+        .code-block-header { display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 1rem; background-color: #121214; color: #a1a1aa; font-size: 0.8rem; border-bottom: 1px solid #242427; font-family: ui-sans-serif, system-ui, sans-serif; }
+        .code-block-content { background-color: #161618; padding: 1.25rem; overflow-x: auto; margin: 0 !important; }
+        .code-block-content pre { margin: 0 !important; padding: 0 !important; background: transparent !important; }
+        
+        html:not(.dark) .code-block-wrapper { border-color: #e4e4e7; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        html:not(.dark) .code-block-header { background-color: #f4f4f5; color: #71717a; border-bottom-color: #e4e4e7; }
+        html:not(.dark) .code-block-content { background-color: #fafafa; }
+
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); position: absolute; z-index: 50; height: 100%; }
+            .sidebar.open { transform: translateX(0); }
+        }
+
+        .chat-item-active {
+            background-color: rgba(62, 94, 255, 0.1) !important;
+            border-left: 3px solid #3e5eff;
+            color: #3e5eff !important;
+        }
+
+        /* Typewriter Smooth Effect */
+        .cursor-blink::after {
+            content: "▊";
+            animation: blink 0.8s step-start infinite;
+            color: #3e5eff;
+            margin-left: 2px;
+        }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        /* Исключение прозы из Markdown блоков в Canvas */
+        .canvas-container iframe {
+            background-color: #fff;
+            border-radius: 0.5rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 dark:bg-ds-bg dark:text-ds-text h-screen flex overflow-hidden transition-colors duration-300 font-sans select-none">
+
+    <!-- Mobile Sidebar Overlay -->
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black/60 z-40 hidden backdrop-blur-sm" onclick="toggleSidebar()"></div>
+
+    <!-- Hidden File Input for Attachments -->
+    <input type="file" id="globalFileInput" class="hidden" onchange="handleFileSelect(event)">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar w-72 flex-shrink-0 bg-gray-100 dark:bg-ds-panel border-r border-gray-200 dark:border-ds-border flex flex-col transition-colors duration-300 shadow-xl md:shadow-none z-50 md:z-10">
+        <!-- Sidebar Header -->
+        <div class="p-4 flex items-center justify-between border-b border-gray-200 dark:border-ds-border">
+            <div class="flex items-center gap-2.5 cursor-pointer" onclick="startNewChat()">
+                <div class="w-8 h-8 bg-ds-primary rounded-xl flex items-center justify-center text-white shadow-lg shadow-ds-primary/20">
+                    <i class="ph-fill ph-brain text-lg"></i>
+                </div>
+                <span class="font-extrabold text-lg tracking-tight">XChatAI</span>
+            </div>
+            <button onclick="toggleSidebar()" class="md:hidden text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                <i class="ph ph-x text-xl"></i>
+            </button>
+        </div>
+
+        <!-- Sidebar Actions -->
+        <div class="p-3 space-y-2">
+            <button onclick="startNewChat()" class="w-full flex items-center justify-center gap-2 bg-ds-primary hover:bg-ds-primaryHover text-white px-4 py-2.5 rounded-xl transition-all duration-200 font-semibold shadow-lg shadow-ds-primary/20">
+                <i class="ph ph-plus-bold text-sm"></i>
+                <span>Новый чат</span>
+            </button>
+            <div class="relative">
+                <i class="ph ph-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                <input type="text" id="chatSearchInput" oninput="filterChats()" placeholder="Поиск по чатам..." class="w-full bg-white dark:bg-ds-bg text-sm text-gray-800 dark:text-gray-200 rounded-xl pl-9 pr-3 py-2.5 border border-gray-200 dark:border-ds-border focus:border-ds-primary/40 transition-colors">
+            </div>
+            <button onclick="openLibraryModal()" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-ds-bg transition-colors text-sm font-medium">
+                <i class="ph ph-books text-lg text-ds-primary"></i>
+                <span>Библиотека</span>
+            </button>
+        </div>
+
+        <!-- Chat List -->
+        <div class="flex-1 overflow-y-auto p-3 space-y-1" id="chatList"></div>
+
+        <!-- Bots Section -->
+        <div class="p-3 border-t border-gray-200 dark:border-ds-border">
+            <div class="text-[10px] font-bold text-gray-400 dark:text-gray-500 mb-2 uppercase tracking-widest px-2">XChat-Боты</div>
+            <button onclick="openBotModal()" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-ds-bg transition-colors text-sm font-medium border border-dashed border-gray-300 dark:border-ds-border">
+                <i class="ph ph-robot text-lg text-purple-500"></i>
+                <span>Создать XChat-Бота</span>
+            </button>
+        </div>
+
+        <!-- User Settings -->
+        <div class="p-3 border-t border-gray-200 dark:border-ds-border flex items-center justify-between">
+            <button onclick="toggleTheme()" class="p-2.5 rounded-xl hover:bg-gray-200 dark:hover:bg-ds-bg text-gray-600 dark:text-gray-400 transition-colors">
+                <i class="ph ph-moon text-xl dark:hidden"></i>
+                <i class="ph ph-sun text-xl hidden dark:block"></i>
+            </button>
+            <button onclick="openSettings()" class="p-2.5 rounded-xl hover:bg-gray-200 dark:hover:bg-ds-bg text-gray-600 dark:text-gray-400 transition-colors">
+                <i class="ph ph-gear text-xl"></i>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 flex overflow-hidden relative min-w-0">
+        
+        <!-- Chat Interface Panel -->
+        <main class="flex-1 flex flex-col relative min-w-0">
+            <!-- Header -->
+            <header class="h-14 flex items-center justify-between px-4 border-b border-gray-200 dark:border-ds-border bg-white/80 dark:bg-ds-bg/80 backdrop-blur-md z-10 absolute top-0 left-0 right-0">
+                <div class="flex items-center gap-2">
+                    <button onclick="toggleSidebar()" class="md:hidden p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-ds-panel text-gray-600 dark:text-gray-300">
+                        <i class="ph ph-list text-xl"></i>
+                    </button>
+                    
+                    <!-- Model Selector -->
+                    <div class="relative group">
+                        <button class="flex items-center gap-2 px-3 py-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-ds-panel transition-colors text-sm font-semibold">
+                            <span id="currentModelDisplay">XChatAI 2 Flash</span>
+                            <i class="ph ph-caret-down text-gray-400 text-xs"></i>
+                        </button>
+                        <div class="absolute left-0 top-full mt-1.5 w-72 bg-white dark:bg-ds-panel border border-gray-200 dark:border-ds-border rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-250 z-50 py-1.5">
+                            <button onclick="selectModel('XChatAI 1 Flash (1009000 на 2 дня)')" class="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-100 dark:hover:bg-ds-bg transition-colors">XChatAI 1 Flash <span class="text-[11px] text-gray-400 block mt-0.5">1009000 на 2 дня</span></button>
+                            <button onclick="selectModel('XChat 1 Pro (500555 на 2 дня)')" class="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-100 dark:hover:bg-ds-bg transition-colors">XChat 1 Pro <span class="text-[11px] text-gray-400 block mt-0.5">500555 на 2 дня</span></button>
+                            <button onclick="selectModel('XChatAI 2 Flash (1000000 на 2 дня, умнее)')" class="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-100 dark:hover:bg-ds-bg text-ds-primary font-semibold transition-colors">XChatAI 2 Flash <span class="text-[11px] text-gray-400 block mt-0.5">1000000 на 2 дня, умнее</span></button>
+                            <button onclick="selectModel('XChatAI 2 Pro-Demo (500555 на 3 дня)')" class="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-100 dark:hover:bg-ds-bg transition-colors">XChatAI 2 Pro-Demo <span class="text-[11px] text-gray-400 block mt-0.5">500555 на 3 дня</span></button>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="startNewChat()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-ds-panel text-gray-600 dark:text-gray-300 transition-colors">
+                    <i class="ph ph-pencil-simple text-xl"></i>
+                </button>
+            </header>
+
+            <!-- Chat Area -->
+            <div id="chatContainer" class="flex-1 overflow-y-auto pt-14 pb-44 scroll-smooth">
+                <!-- Welcome Screen -->
+                <div id="welcomeScreen" class="h-full flex flex-col items-center justify-center px-4 animate-fade-in">
+                    <div class="w-20 h-20 bg-ds-primary/10 rounded-3xl flex items-center justify-center mb-6 shadow-2xl relative">
+                        <i class="ph-fill ph-brain text-5xl text-ds-primary"></i>
+                        <span class="absolute -top-1 -right-1 flex h-3 w-3">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                        </span>
+                    </div>
+                    <h1 class="text-3xl font-extrabold mb-2 text-center text-gray-900 dark:text-white tracking-tight">XChatAI Сверхсистема</h1>
+                    <p class="text-gray-400 dark:text-gray-500 mb-8 text-center max-w-sm text-sm">Добавлено глубокое рассуждение, генерация изображений Imagen 4 и интерактивный холст Canvas.</p>
+                </div>
+
+                <!-- Messages Stream -->
+                <div id="messagesList" class="hidden flex-col max-w-3xl mx-auto w-full px-4 py-6 space-y-6"></div>
+            </div>
+
+            <!-- Input Area (Sleek Bottom Box) -->
+            <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-gray-50 via-gray-50/90 dark:from-ds-bg dark:via-ds-bg/90 to-transparent">
+                <!-- Attachment preview container -->
+                <div id="attachmentContainer" class="max-w-3xl mx-auto mb-2.5 hidden flex items-center gap-2 p-2 bg-white dark:bg-ds-panel rounded-xl border border-gray-200 dark:border-ds-border w-fit shadow-md animate-slide-up">
+                    <i class="ph ph-file-text text-xl text-ds-primary"></i>
+                    <span id="attachmentName" class="text-xs font-semibold truncate max-w-[200px]">file.txt</span>
+                    <button onclick="clearAttachment()" class="text-gray-400 hover:text-red-500 transition-colors"><i class="ph ph-x-circle text-base"></i></button>
+                </div>
+
+                <div class="max-w-3xl mx-auto relative flex flex-col bg-white dark:bg-ds-panel border border-gray-200 dark:border-ds-border rounded-2xl p-2 shadow-xl focus-within:border-ds-primary/60 focus-within:ring-2 focus-within:ring-ds-primary/10 transition-all duration-300">
+                    
+                    <!-- Text Area Input -->
+                    <textarea id="userInput" rows="1" placeholder="Задайте любой вопрос или сгенерируйте код..." class="w-full bg-transparent border-none outline-none resize-none max-h-36 px-3 pt-2.5 pb-1.5 text-gray-800 dark:text-gray-100 text-[15px] leading-relaxed" oninput="autoResize(this)" onkeydown="handleEnter(event)"></textarea>
+                    
+                    <!-- Control Panel (Footer row inside Input) -->
+                    <div class="flex items-center justify-between border-t border-gray-100 dark:border-ds-border/50 pt-2 px-1">
+                        <div class="flex items-center gap-1">
+                            <!-- Plus Menu Button -->
+                            <div class="relative">
+                                <button onclick="togglePlusMenu()" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-ds-bg text-gray-500 dark:text-gray-400 hover:text-ds-primary transition-colors shrink-0" title="Дополнительные инструменты">
+                                    <i class="ph ph-plus-circle text-xl"></i>
+                                </button>
+                                <!-- Plus Dropdown -->
+                                <div id="plusMenu" class="absolute bottom-full left-0 mb-3 w-64 bg-white dark:bg-ds-panel border border-gray-200 dark:border-ds-border rounded-2xl shadow-2xl opacity-0 invisible transition-all duration-200 z-50 py-2">
+                                    <button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-gray-50 dark:hover:bg-ds-bg text-left text-gray-700 dark:text-gray-300 font-medium transition-colors" onclick="triggerFileUpload()">
+                                        <i class="ph ph-paperclip text-lg text-blue-500"></i> Отправить Фото / Файл
+                                    </button>
+                                    <button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-gray-50 dark:hover:bg-ds-bg text-left text-gray-700 dark:text-gray-300 font-medium transition-colors" onclick="enableImageGenerationMode()">
+                                        <i class="ph ph-image text-lg text-purple-500 animate-pulse-slow"></i> Генерация изображений (Imagen 4)
+                                    </button>
+                                    <button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-gray-50 dark:hover:bg-ds-bg text-left text-gray-700 dark:text-gray-300 font-medium transition-colors" onclick="openCanvasPanel('', 'text')">
+                                        <i class="ph ph-layout text-lg text-orange-500"></i> Пустой холст (Canvas)
+                                    </button>
+                                    <button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-gray-50 dark:hover:bg-ds-bg text-left text-gray-700 dark:text-gray-300 font-medium transition-colors" onclick="openTrainingModal()">
+                                        <i class="ph ph-student text-lg text-green-500"></i> Обучение
+                                    </button>
+                                    <div class="px-4 py-2.5 border-t border-gray-100 dark:border-ds-border mt-1">
+                                        <label class="flex items-center justify-between cursor-pointer">
+                                            <span class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-3 font-semibold">
+                                                <i class="ph ph-user-gear text-base text-pink-500"></i> Персонализация
+                                            </span>
+                                            <div class="relative">
+                                                <input type="checkbox" id="personalizationToggle" class="sr-only" onchange="togglePersonalizationSetting()">
+                                                <div class="block bg-gray-200 dark:bg-gray-700 w-8 h-4.5 rounded-full transition-colors"></div>
+                                                <div class="dot absolute left-0.5 top-0.5 bg-white w-3.5 h-3.5 rounded-full transition-transform"></div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- DeepThink (Reasoning Level) Toggle Button -->
+                            <button id="deepThinkBtn" onclick="toggleDeepThink()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-ds-border hover:border-blue-500/40 text-xs font-bold text-gray-500 dark:text-gray-400 transition-all duration-200" title="Включить глубокое рассуждение">
+                                <i class="ph ph-sparkle text-base"></i>
+                                <span>Глубокое мышление</span>
+                            </button>
+                        </div>
+
+                        <!-- Mic, File and Send -->
+                        <div class="flex items-center gap-1.5">
+                            <button id="micBtn" onclick="toggleVoiceRecording()" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-ds-bg text-gray-500 dark:text-gray-400 hover:text-ds-primary transition-colors" title="Голосовой ввод">
+                                <i class="ph ph-microphone text-xl" id="micIcon"></i>
+                            </button>
+                            <button onclick="sendMessage()" class="p-2 rounded-xl bg-ds-primary hover:bg-ds-primaryHover text-white transition-all shrink-0 disabled:opacity-30 disabled:cursor-not-allowed" id="sendBtn" disabled>
+                                <i class="ph ph-paper-plane-right-bold text-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- CANVAS SIDE-PANEL (Claude / OpenAI style sliding container) -->
+        <div id="canvasPanel" class="w-0 flex-shrink-0 bg-white dark:bg-ds-panel border-l border-gray-200 dark:border-ds-border flex flex-col transition-all duration-300 overflow-hidden relative">
+            <div class="p-4 border-b border-gray-200 dark:border-ds-border flex items-center justify-between bg-gray-50 dark:bg-ds-panel/50">
+                <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 bg-orange-500/10 rounded-lg flex items-center justify-center text-orange-500">
+                        <i class="ph-fill ph-layout text-base"></i>
+                    </div>
+                    <span class="font-bold text-sm" id="canvasTitle">XCanvas Рабочая область</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <!-- Tab Buttons -->
+                    <div class="bg-gray-100 dark:bg-ds-bg p-1 rounded-lg flex items-center gap-1 mr-2">
+                        <button onclick="setCanvasTab('source')" id="tabBtnSource" class="px-2.5 py-1 text-xs font-semibold rounded-md bg-white dark:bg-ds-panel shadow-sm">Код</button>
+                        <button onclick="setCanvasTab('preview')" id="tabBtnPreview" class="px-2.5 py-1 text-xs font-semibold rounded-md text-gray-500">Просмотр</button>
+                    </div>
+                    <button onclick="copyCanvasContent()" class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-ds-bg text-gray-500 transition-colors" title="Скопировать все"><i class="ph ph-copy text-lg"></i></button>
+                    <button onclick="closeCanvasPanel()" class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-ds-bg text-gray-500 transition-colors" title="Закрыть"><i class="ph ph-x-bold text-lg"></i></button>
+                </div>
+            </div>
+
+            <!-- Canvas Workspaces -->
+            <div class="flex-1 overflow-hidden relative flex flex-col p-4">
+                <!-- Source View / Code Editor -->
+                <textarea id="canvasEditor" class="w-full h-full bg-gray-50 dark:bg-ds-bg text-gray-800 dark:text-gray-100 p-4 font-mono text-sm border border-gray-200 dark:border-ds-border rounded-xl resize-none outline-none focus:border-ds-primary/50 transition-all leading-relaxed" oninput="updateCanvasPreview()"></textarea>
+                
+                <!-- Preview View -->
+                <div id="canvasPreviewContainer" class="absolute inset-4 bg-white rounded-xl shadow-inner overflow-hidden hidden flex-col">
+                    <iframe id="canvasPreviewFrame" class="w-full h-full border-none" sandbox="allow-scripts"></iframe>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- --- Окна Модулей и Функций --- -->
+
+    <!-- Модалка настроек -->
+    <div id="settingsModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center backdrop-blur-sm px-4">
+        <div class="bg-white dark:bg-ds-panel w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-ds-border">
+            <div class="p-5 border-b border-gray-200 dark:border-ds-border flex justify-between items-center">
+                <h3 class="text-lg font-bold">Настройки XChatAI</h3>
+                <button onclick="closeSettings()" class="text-gray-500 hover:text-gray-800 dark:hover:text-white"><i class="ph ph-x text-xl"></i></button>
+            </div>
+            <div class="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-500 mb-2 uppercase tracking-wider text-xs">Характер ИИ (System Instructions)</label>
+                    <textarea id="systemPromptInput" rows="3" class="w-full bg-gray-50 dark:bg-ds-bg border border-gray-200 dark:border-ds-border rounded-xl p-3.5 text-sm resize-none outline-none focus:border-ds-primary" placeholder="Опишите поведение..."></textarea>
+                </div>
+                
+                <!-- AI Memory Section -->
+                <div class="p-4 bg-gray-50 dark:bg-ds-bg/50 border border-gray-200 dark:border-ds-border rounded-xl">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm font-bold flex items-center gap-2"><i class="ph ph-brain text-ds-primary"></i> Память ИИ (Memory)</span>
+                        <button onclick="clearMemory()" class="text-xs text-red-500 font-semibold hover:underline">Очистить</button>
+                    </div>
+                    <textarea id="aiMemoryInput" rows="3" class="w-full bg-white dark:bg-ds-bg border border-gray-200 dark:border-ds-border rounded-lg p-2.5 text-xs resize-none outline-none focus:border-ds-primary" placeholder="Здесь отображается то, что ИИ узнал и запомнил о вас (например: Меня зовут Алекс, я пишу на Godot 4)."></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-500 mb-2 uppercase tracking-wider text-xs">Адрес API / Прокси-сервер</label>
+                    <input type="text" id="apiProxyInput" class="w-full bg-gray-50 dark:bg-ds-bg border border-gray-200 dark:border-ds-border rounded-xl p-3 text-sm outline-none focus:border-ds-primary" placeholder="https://generativelanguage.googleapis.com">
+                </div>
+
+                <div class="p-4 rounded-xl bg-red-500/5 dark:bg-red-950/20 border border-red-200/50 dark:border-red-900/40">
+                    <label class="flex items-center justify-between cursor-pointer">
+                        <div>
+                            <span class="text-sm font-bold text-red-500 flex items-center gap-2"><i class="ph-fill ph-fire animate-pulse"></i> Режим Демона</span>
+                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Полностью неформальный ИИ без ограничений кода.</p>
+                        </div>
+                        <input type="checkbox" id="demonToggle" class="sr-only">
+                        <div class="w-10 h-6 bg-gray-300 dark:bg-gray-700 rounded-full relative"><div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform"></div></div>
+                    </label>
+                </div>
+            </div>
+            <div class="p-4 bg-gray-50 dark:bg-ds-bg border-t border-gray-200 dark:border-ds-border flex justify-end">
+                <button onclick="saveSettings()" class="bg-ds-primary hover:bg-ds-primaryHover text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-ds-primary/20">Сохранить настройки</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модалка Библиотеки -->
+    <div id="libraryModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center backdrop-blur-sm px-4">
+        <div class="bg-white dark:bg-ds-panel w-full max-w-lg rounded-2xl border border-gray-200 dark:border-ds-border overflow-hidden shadow-2xl">
+            <div class="p-4 border-b border-gray-200 dark:border-ds-border flex justify-between items-center">
+                <h3 class="text-md font-bold flex items-center gap-2"><i class="ph ph-books text-ds-primary"></i> Библиотека Промптов</h3>
+                <button onclick="closeLibraryModal()" class="text-gray-400 hover:text-white"><i class="ph ph-x text-lg"></i></button>
+            </div>
+            <div class="p-4 max-h-96 overflow-y-auto space-y-2">
+                <div onclick="applyLibraryPrompt('Напиши полноценную механику инвентаря для RPG игры на Godot 4.5 GDScript')" class="p-3 bg-gray-50 dark:bg-ds-bg rounded-xl border border-gray-200 dark:border-ds-border cursor-pointer hover:border-ds-primary transition-colors">
+                    <div class="font-semibold text-sm">Шаблон: Архитектура инвентаря Godot 4.5</div>
+                    <div class="text-xs text-gray-400 mt-1">Детальный разбор структуры хранения предметов.</div>
+                </div>
+                <div onclick="applyLibraryPrompt('Оптимизируй этот алгоритм обработки массивов данных')" class="p-3 bg-gray-50 dark:bg-ds-bg rounded-xl border border-gray-200 dark:border-ds-border cursor-pointer hover:border-ds-primary transition-colors">
+                    <div class="font-semibold text-sm">Шаблон: Глубокая оптимизация кода</div>
+                    <div class="text-xs text-gray-400 mt-1">Ориентирует ИИ на рефакторинг без потери логики.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модалка Обучения -->
+    <div id="trainingModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center backdrop-blur-sm px-4">
+        <div class="bg-white dark:bg-ds-panel w-full max-w-md rounded-2xl border border-gray-200 dark:border-ds-border overflow-hidden shadow-2xl">
+            <div class="p-4 border-b border-gray-200 dark:border-ds-border flex justify-between items-center">
+                <h3 class="text-md font-bold flex items-center gap-2"><i class="ph ph-student text-green-500"></i> Интерактивное обучение</h3>
+                <button onclick="closeTrainingModal()" class="text-gray-400 hover:text-white"><i class="ph ph-x text-lg"></i></button>
+            </div>
+            <div class="p-6 text-center space-y-4">
+                <div class="bg-ds-bg p-6 rounded-2xl border border-gray-200 dark:border-ds-border min-h-[120px] flex items-center justify-center font-medium" id="trainingCard">
+                    Что делает ключевое слово `export` в Godot GDScript?
+                </div>
+                <button onclick="revealTrainingAnswer()" class="w-full py-2 bg-gray-100 dark:bg-ds-bg border border-gray-200 dark:border-ds-border rounded-xl text-sm font-medium hover:text-ds-primary transition-colors">Показать ответ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модалка Создания Бота -->
+    <div id="botModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center backdrop-blur-sm px-4">
+        <div class="bg-white dark:bg-ds-panel w-full max-w-md rounded-2xl border border-gray-200 dark:border-ds-border overflow-hidden shadow-2xl">
+            <div class="p-4 border-b border-gray-200 dark:border-ds-border flex justify-between items-center">
+                <h3 class="text-md font-bold flex items-center gap-2"><i class="ph ph-robot text-purple-500"></i> Конструктор XChat-Бота</h3>
+                <button onclick="closeBotModal()" class="text-gray-400 hover:text-white"><i class="ph ph-x text-lg"></i></button>
+            </div>
+            <div class="p-5 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Имя Бота</label>
+                    <input type="text" id="botNameInput" class="w-full bg-ds-bg border border-gray-200 dark:border-ds-border rounded-xl p-2.5 text-sm outline-none focus:border-purple-500" placeholder="Например: Godot Архитектор">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Характер / Инструкции</label>
+                    <textarea id="botPromptInput" rows="3" class="w-full bg-ds-bg border border-gray-200 dark:border-ds-border rounded-xl p-2.5 text-sm resize-none outline-none focus:border-purple-500" placeholder="Опишите роль..."></textarea>
+                </div>
+                <button onclick="saveCustomBot()" class="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-semibold transition-colors">Создать и запустить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Кастомное Контекстное Меню -->
+    <div id="customContextMenu" class="fixed bg-white dark:bg-ds-panel border border-gray-200 dark:border-ds-border rounded-xl shadow-2xl z-50 py-1.5 hidden w-48 text-sm">
+        <button onclick="contextAction('copy')" class="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-ds-bg flex items-center gap-2"><i class="ph ph-copy"></i> Копировать элемент</button>
+        <button onclick="contextAction('delete')" class="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-ds-bg text-red-500 flex items-center gap-2"><i class="ph ph-trash"></i> Удалить из списка</button>
+        <button onclick="contextAction('share')" class="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-ds-bg flex items-center gap-2"><i class="ph ph-share-network"></i> Поделиться</button>
+    </div>
+
+    <!-- Трей Хранения Уведомлений (Toast) -->
+    <div id="toast" class="fixed top-5 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-4 py-2.5 rounded-xl shadow-2xl opacity-0 transition-opacity duration-300 z-[100] pointer-events-none flex items-center gap-2 text-sm">
+        <i class="ph ph-info text-lg text-ds-primary"></i>
+        <span id="toastMessage"></span>
+    </div>
+
+    <!-- --- Скриптовая Логика --- -->
+    <script>
+        // ==========================================
+        // ВСТАВЬ СЮДА СВОЙ КЛЮЧ ОТ GOOGLE AI STUDIO
+        // ==========================================
+        const API_KEY = "AQ.Ab8RN6LecN-gWTfTZPqAa8x4wxpQk7Ai-SySo3i6S6D3S9Uz9A"; 
+
+        // Глобальное состояние сессии
+        let state = {
+            currentChatId: null,
+            chats: {}, 
+            customBots: {},
+            activeTargetElement: null,
+            activeTargetId: null,
+            currentModel: "XChatAI 2 Flash",
+            isImageGenerationMode: false,
+            isDeepThinkMode: false,
+            attachedFile: null,
+            personalizationActive: true,
+            apiHost: "https://generativelanguage.googleapis.com"
+        };
+
+        let settings = { systemPrompt: "", isDemonMode: false, memory: "" };
+
+        // Инициализация
+        window.addEventListener('DOMContentLoaded', () => {
+            initDefaultChats();
+            renderChatsList();
+            setupCanvasLogic();
+            setupContextMenuGlobal();
+            
+            // Загрузка настроек API прокси и памяти из LocalStorage
+            const savedHost = localStorage.getItem('xchatai_api_host');
+            if (savedHost) {
+                state.apiHost = savedHost;
+            }
+            document.getElementById('apiProxyInput').value = state.apiHost;
+
+            const savedMemory = localStorage.getItem('xchatai_ai_memory') || "";
+            settings.memory = savedMemory;
+            document.getElementById('aiMemoryInput').value = settings.memory;
+
+            document.getElementById('personalizationToggle').checked = state.personalizationActive;
+            updateToggleVisuals(document.getElementById('personalizationToggle'));
+        });
+
+        function initDefaultChats() {
+            const id1 = 'chat_' + Date.now();
+            state.chats[id1] = {
+                id: id1,
+                title: 'Приветствие',
+                history: [
+                    { role: 'model', content: 'Привет! Я **XChatAI Pro** — сверхсистема с глубоким анализом и встроенным Canvas. \n\nВы можете вводить команды, рисовать, запускать интерактивный код, генерировать изображения или нажать синюю кнопку «Глубокое мышление» для сверханализа.' }
+                ]
+            };
+            state.currentChatId = id1;
+            loadChatSession(id1);
+        }
+
+        function renderChatsList() {
+            const list = document.getElementById('chatList');
+            list.innerHTML = '';
+            
+            Object.values(state.chats).forEach(chat => {
+                const item = document.createElement('div');
+                item.className = `flex items-center justify-between p-2.5 rounded-xl text-sm cursor-pointer transition-colors hover:bg-gray-200 dark:hover:bg-ds-bg group relative ${state.currentChatId === chat.id ? 'chat-item-active' : 'text-gray-700 dark:text-gray-300'}`;
+                item.setAttribute('data-id', chat.id);
+                item.innerHTML = `
+                    <div class="flex items-center gap-2.5 truncate flex-1" onclick="loadChatSession('${chat.id}')">
+                        <i class="ph ph-chat-circle text-base shrink-0"></i>
+                        <span class="truncate pr-4">${chat.title}</span>
+                    </div>
+                    <i class="ph ph-dots-three-vertical text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity p-1" onclick="triggerContextDirect(event, '${chat.id}')"></i>
+                `;
+                
+                item.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    openCustomContextMenu(e.clientX, e.clientY, item, chat.id);
+                });
+
+                list.appendChild(item);
+            });
+        }
+
+        function filterChats() {
+            const query = document.getElementById('chatSearchInput').value.toLowerCase();
+            const items = document.getElementById('chatList').children;
+            for (let item of items) {
+                const text = item.innerText.toLowerCase();
+                item.style.display = text.includes(query) ? 'flex' : 'none';
+            }
+        }
+
+        function loadChatSession(id) {
+            state.currentChatId = id;
+            renderChatsList();
+            
+            const chat = state.chats[id];
+            const list = document.getElementById('messagesList');
+            const welcome = document.getElementById('welcomeScreen');
+            
+            if(!chat || chat.history.length === 0) {
+                list.innerHTML = '';
+                list.classList.add('hidden');
+                welcome.classList.remove('hidden');
+                return;
+            }
+
+            welcome.classList.add('hidden');
+            list.classList.remove('hidden');
+            list.classList.add('flex');
+            list.innerHTML = '';
+
+            chat.history.forEach(msg => {
+                appendMessageToDOM(msg.role, msg.content);
+            });
+            scrollToBottom();
+        }
+
+        function startNewChat() {
+            const newId = 'chat_' + Date.now();
+            state.chats[newId] = { id: newId, title: 'Новый диалог', history: [] };
+            loadChatSession(newId);
+            if(window.innerWidth <= 768) toggleSidebar();
+        }
+
+        function setupContextMenuGlobal() {
+            document.addEventListener('click', () => {
+                document.getElementById('customContextMenu').classList.add('hidden');
+            });
+        }
+
+        function openCustomContextMenu(x, y, targetEl, id) {
+            state.activeTargetElement = targetEl;
+            state.activeTargetId = id;
+            const menu = document.getElementById('customContextMenu');
+            menu.style.left = `${x}px`;
+            menu.style.top = `${y}px`;
+            menu.classList.remove('hidden');
+        }
+
+        function triggerContextDirect(e, id) {
+            e.stopPropagation();
+            openCustomContextMenu(e.clientX, e.clientY, e.currentTarget.parentElement, id);
+        }
+
+        function contextAction(action) {
+            if(action === 'delete') {
+                if(state.activeTargetId && state.chats[state.activeTargetId]) {
+                    delete state.chats[state.activeTargetId];
+                    showToast("Элемент удален из реестра");
+                    const keys = Object.keys(state.chats);
+                    if(keys.length > 0) loadChatSession(keys[0]);
+                    else startNewChat();
+                }
+            } else if(action === 'copy') {
+                copyText(state.activeTargetElement.innerText);
+            } else if(action === 'share') {
+                showToast("Ссылка генерации скопирована");
+            }
+        }
+
+        function autoResize(el) {
+            el.style.height = 'auto';
+            el.style.height = (el.scrollHeight < 144 ? el.scrollHeight : 144) + 'px';
+            document.getElementById('sendBtn').disabled = el.value.trim().length === 0 && !state.attachedFile;
+        }
+
+        function handleEnter(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (!document.getElementById('sendBtn').disabled) sendMessage();
+            }
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('sidebarOverlay').classList.toggle('hidden');
+        }
+
+        function toggleTheme() {
+            document.documentElement.classList.toggle('dark');
+        }
+
+        function selectModel(name) {
+            state.currentModel = name;
+            document.getElementById('currentModelDisplay').innerText = name.split('(')[0].trim();
+            showToast("Выбран процессор: " + name.split('(')[0].trim());
+        }
+
+        function togglePlusMenu() {
+            const m = document.getElementById('plusMenu');
+            m.classList.toggle('opacity-0');
+            m.classList.toggle('invisible');
+        }
+
+        function toggleDeepThink() {
+            state.isDeepThinkMode = !state.isDeepThinkMode;
+            const btn = document.getElementById('deepThinkBtn');
+            if (state.isDeepThinkMode) {
+                btn.classList.add('border-ds-primary', 'text-ds-primary', 'bg-ds-primary/5', 'shadow-md', 'shadow-ds-primary/10');
+                showToast("Глубокое рассуждение активировано");
+            } else {
+                btn.classList.remove('border-ds-primary', 'text-ds-primary', 'bg-ds-primary/5', 'shadow-md', 'shadow-ds-primary/10');
+                showToast("Переключено на стандартное мышление");
+            }
+        }
+
+        function openSettings() { 
+            document.getElementById('systemPromptInput').value = settings.systemPrompt;
+            document.getElementById('demonToggle').checked = settings.isDemonMode;
+            document.getElementById('apiProxyInput').value = state.apiHost;
+            document.getElementById('aiMemoryInput').value = settings.memory;
+            document.getElementById('settingsModal').classList.remove('hidden'); 
+        }
+        function closeSettings() { document.getElementById('settingsModal').classList.add('hidden'); }
+        
+        function saveSettings() {
+            settings.systemPrompt = document.getElementById('systemPromptInput').value;
+            settings.isDemonMode = document.getElementById('demonToggle').checked;
+            
+            // Сохранение кастомного хоста
+            const hostValue = document.getElementById('apiProxyInput').value.trim() || "https://generativelanguage.googleapis.com";
+            state.apiHost = hostValue;
+            localStorage.setItem('xchatai_api_host', hostValue);
+
+            // Сохранение кастомной памяти
+            const memoryValue = document.getElementById('aiMemoryInput').value.trim();
+            settings.memory = memoryValue;
+            localStorage.setItem('xchatai_ai_memory', memoryValue);
+
+            closeSettings();
+            showToast("Конфигурации успешно синхронизированы");
+        }
+
+        function clearMemory() {
+            settings.memory = "";
+            document.getElementById('aiMemoryInput').value = "";
+            localStorage.removeItem('xchatai_ai_memory');
+            showToast("Память очищена");
+        }
+
+        function openLibraryModal() { document.getElementById('libraryModal').classList.remove('hidden'); }
+        function closeLibraryModal() { document.getElementById('libraryModal').classList.add('hidden'); }
+        function applyLibraryPrompt(text) {
+            document.getElementById('userInput').value = text;
+            autoResize(document.getElementById('userInput'));
+            closeLibraryModal();
+        }
+
+        function openTrainingModal() { document.getElementById('trainingModal').classList.remove('hidden'); }
+        function closeTrainingModal() { document.getElementById('trainingModal').classList.add('hidden'); }
+        function revealTrainingAnswer() {
+            document.getElementById('trainingCard').innerHTML = "Контекстное ключевое слово `export` делает переменную доступной в панели Инспектора редактора Godot для удобной настройки параметров сцены.";
+        }
+
+        function openBotModal() { document.getElementById('botModal').classList.remove('hidden'); }
+        function closeBotModal() { document.getElementById('botModal').classList.add('hidden'); }
+        function saveCustomBot() {
+            const name = document.getElementById('botNameInput').value.trim();
+            const prompt = document.getElementById('botPromptInput').value.trim();
+            if(!name) return;
+
+            const botId = 'bot_' + Date.now();
+            state.chats[botId] = {
+                id: botId,
+                title: `🤖 ${name}`,
+                history: [{ role: 'model', content: `Бот **${name}** успешно инициализирован. Спросите меня о чём угодно в рамках моей роли.` }],
+                customSystem: prompt
+            };
+            closeBotModal();
+            loadChatSession(botId);
+            showToast(`Бот ${name} создан!`);
+        }
+
+        function triggerFileUpload() {
+            document.getElementById('globalFileInput').click();
+            togglePlusMenu();
+        }
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if(file) {
+                state.attachedFile = file;
+                document.getElementById('attachmentName').innerText = file.name;
+                document.getElementById('attachmentContainer').classList.remove('hidden');
+                document.getElementById('sendBtn').disabled = false;
+            }
+        }
+        function clearAttachment() {
+            state.attachedFile = null;
+            document.getElementById('globalFileInput').value = "";
+            document.getElementById('attachmentContainer').classList.add('hidden');
+            autoResize(document.getElementById('userInput'));
+        }
+
+        function enableImageGenerationMode() {
+            state.isImageGenerationMode = true;
+            document.getElementById('userInput').placeholder = "Опишите изображение, которое хотите сгенерировать...";
+            togglePlusMenu();
+            showToast("Включен режим генерации изображений");
+        }
+
+        function togglePersonalizationSetting() {
+            state.personalizationActive = !state.personalizationActive;
+            showToast(state.personalizationActive ? "Персонализация данных активирована" : "Персонализация отключена");
+        }
+
+        function updateToggleVisuals(el) {
+            if(el.checked) {
+                el.nextElementSibling.classList.replace('bg-gray-200', 'bg-ds-primary');
+                el.nextElementSibling.nextElementSibling.style.transform = 'translateX(100%)';
+            }
+        }
+
+        let canvas, ctx, painting = false;
+        function setupCanvasLogic() {
+            canvas = document.getElementById('paintCanvas');
+            ctx = canvas.getContext('2d');
+            
+            canvas.addEventListener('mousedown', startPosition);
+            canvas.addEventListener('mouseup', endPosition);
+            canvas.addEventListener('mousemove', draw);
+            
+            canvas.addEventListener('touchstart', (e) => { startPosition(e.touches[0]); });
+            canvas.addEventListener('touchend', endPosition);
+            canvas.addEventListener('touchmove', (e) => { draw(e.touches[0]); e.preventDefault(); });
+        }
+
+        // --- CANVAS PANEL LOGIC (Claude Artifacts-style side-panel) ---
+        let currentCanvasTab = 'source';
+        function openCanvasPanel(content, type) {
+            const panel = document.getElementById('canvasPanel');
+            panel.style.width = window.innerWidth > 1024 ? '45%' : '100%';
+            document.getElementById('canvasEditor').value = content;
+            setCanvasTab('source');
+            updateCanvasPreview();
+        }
+
+        function closeCanvasPanel() {
+            document.getElementById('canvasPanel').style.width = '0';
+        }
+
+        function setCanvasTab(tab) {
+            currentCanvasTab = tab;
+            const btnSource = document.getElementById('tabBtnSource');
+            const btnPreview = document.getElementById('tabBtnPreview');
+            const editor = document.getElementById('canvasEditor');
+            const previewContainer = document.getElementById('canvasPreviewContainer');
+
+            if (tab === 'source') {
+                btnSource.className = "px-2.5 py-1 text-xs font-semibold rounded-md bg-white dark:bg-ds-panel shadow-sm";
+                btnPreview.className = "px-2.5 py-1 text-xs font-semibold rounded-md text-gray-500";
+                editor.classList.remove('hidden');
+                previewContainer.classList.add('hidden');
+            } else {
+                btnPreview.className = "px-2.5 py-1 text-xs font-semibold rounded-md bg-white dark:bg-ds-panel shadow-sm";
+                btnSource.className = "px-2.5 py-1 text-xs font-semibold rounded-md text-gray-500";
+                editor.classList.add('hidden');
+                previewContainer.classList.remove('hidden');
+                updateCanvasPreview();
+            }
+        }
+
+        function updateCanvasPreview() {
+            const content = document.getElementById('canvasEditor').value;
+            const frame = document.getElementById('canvasPreviewFrame');
+            const doc = frame.contentDocument || frame.contentWindow.document;
+            doc.open();
+            doc.write(content);
+            doc.close();
+        }
+
+        function copyCanvasContent() {
+            const content = document.getElementById('canvasEditor').value;
+            copyText(content);
+        }
+
+        let recognition = null, recordingActive = false;
+        if('webkitSpeechRecognition' in window) {
+            recognition = new webkitSpeechRecognition();
+            recognition.lang = 'ru-RU';
+            recognition.onstart = () => {
+                recordingActive = true;
+                document.getElementById('micIcon').className = 'ph-fill ph-stop text-red-500';
+            };
+            recognition.onend = () => {
+                recordingActive = false;
+                document.getElementById('micIcon').className = 'ph ph-microphone';
+            };
+            recognition.onresult = (e) => {
+                document.getElementById('userInput').value = e.results[0][0].transcript;
+                autoResize(document.getElementById('userInput'));
+            };
+        }
+
+        function toggleVoiceRecording() {
+            if(!recognition) return showToast("Голосовые модули недоступны");
+            if(recordingActive) recognition.stop(); else recognition.start();
+        }
+
+        // Парсинг Markdown с изоляцией блоков кода
+        marked.setOptions({
+            highlight: function(code, lang) {
+                if (lang && hljs.getLanguage(lang)) return hljs.highlight(code, { language: lang }).value;
+                return hljs.highlightAuto(code).value;
+            },
+            breaks: true
+        });
+
+        const customRenderer = new marked.Renderer();
+        customRenderer.code = function(code, language) {
+            const valid = !!(language && hljs.getLanguage(language));
+            const name = valid ? language : 'text';
+            const highlighted = valid ? hljs.highlight(code, { language: name }).value : code.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            
+            // Наш кастомный блок кода с кнопкой «Открыть в Canvas»
+            const codeString = encodeURIComponent(code).replace(/'/g, "\\'");
+            return `
+            <div class="code-block-wrapper not-prose">
+                <div class="code-block-header">
+                    <span>${name}</span>
+                    <div class="flex items-center gap-2">
+                        <button class="flex items-center gap-1 hover:text-white transition-colors" onclick="openCanvasPanel(decodeURIComponent('${codeString}'), '${name}')">
+                            <i class="ph ph-layout-bold"></i><span>В Canvas</span>
+                        </button>
+                        <button class="flex items-center gap-1 hover:text-white transition-colors" onclick="copyCodeBlock(this)">
+                            <i class="ph ph-copy"></i><span>Копировать</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="code-block-content"><pre><code class="hljs ${name}">${highlighted}</code></pre></div>
+            </div>`;
+        };
+        marked.use({ renderer: customRenderer });
+
+        window.copyCodeBlock = function(btn) {
+            const code = btn.closest('.code-block-wrapper').querySelector('code').innerText;
+            copyText(code, btn);
+        };
+
+        function copyText(text, btn) {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            ta.remove();
+            
+            if(btn) {
+                const span = btn.querySelector('span');
+                if(span) {
+                    span.innerText = "Скопировано!";
+                    setTimeout(() => span.innerText = "Копировать", 2000);
+                }
+            } else {
+                showToast("Скопировано в буфер обмена");
+            }
+        }
+
+        // --- RENDER & TYPEWRITER LOGIC (Для плавного вывода на ходу) ---
+        function appendMessageToDOM(role, content) {
+            const list = document.getElementById('messagesList');
+            const welcome = document.getElementById('welcomeScreen');
+            welcome.classList.add('hidden');
+            list.classList.remove('hidden');
+            list.classList.add('flex');
+
+            const msg = document.createElement('div');
+            msg.className = `flex gap-4 w-full animate-slide-up ${role === 'user' ? 'justify-end' : 'justify-start'}`;
+
+            if(role === 'user') {
+                msg.innerHTML = `<div class="max-w-[80%] bg-gray-100 dark:bg-ds-panel rounded-2xl rounded-tr-sm px-5 py-3 shadow-md"><div class="whitespace-pre-wrap font-medium">${content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div></div>`;
+                list.appendChild(msg);
+            } else {
+                // Если это ответ ИИ, проверим на наличие мыслительного процесса <thinking>...</thinking>
+                let thinkingContent = "";
+                let finalContent = content;
+
+                const thinkingRegex = /<thinking>([\s\S]*?)<\/thinking>/i;
+                const match = content.match(thinkingRegex);
+                if (match) {
+                    thinkingContent = match[1].trim();
+                    finalContent = content.replace(thinkingRegex, "").trim();
+                }
+
+                const msgId = 'msg_' + Date.now() + Math.random().toString(36).substr(2, 5);
+                msg.id = msgId;
+
+                // Сборка разметки для вывода
+                let thinkingHTML = "";
+                if (thinkingContent) {
+                    thinkingHTML = `
+                    <details class="mb-3 bg-blue-50/50 dark:bg-blue-950/10 border border-blue-500/20 dark:border-blue-900/30 rounded-xl p-3.5 text-xs text-blue-800 dark:text-blue-300">
+                        <summary class="font-extrabold cursor-pointer list-none flex items-center justify-between">
+                            <span class="flex items-center gap-2"><i class="ph-fill ph-sparkle animate-pulse-slow text-sm"></i> Ход рассуждения</span>
+                            <span class="text-[10px] bg-blue-500/10 px-2 py-0.5 rounded-full font-bold">Раскрыть</span>
+                        </summary>
+                        <div class="mt-2 pl-4 border-l-2 border-blue-500/30 whitespace-pre-wrap leading-relaxed">${thinkingContent}</div>
+                    </details>
+                    `;
+                }
+
+                msg.innerHTML = `
+                    <div class="w-8 h-8 rounded-full bg-ds-primary flex items-center justify-center text-white shrink-0 mt-1 shadow-md shadow-ds-primary/20"><i class="ph-fill ph-brain"></i></div>
+                    <div class="max-w-[calc(100%-3rem)] pt-1 flex-1">
+                        ${thinkingHTML}
+                        <div class="markdown-body prose prose-sm dark:prose-invert max-w-none text-[15px] leading-relaxed">${marked.parse(finalContent)}</div>
+                        <div class="flex items-center gap-3 mt-3 text-xs text-gray-400">
+                            <button class="hover:text-white transition-colors"><i class="ph ph-thumbs-up text-base"></i></button>
+                            <button class="hover:text-white transition-colors"><i class="ph ph-thumbs-down text-base"></i></button>
+                            <button class="hover:text-white flex items-center gap-1 transition-colors" onclick="copyText(\`${encodeURIComponent(finalContent).replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)"><i class="ph ph-copy text-base"></i> Скопировать всё</button>
+                        </div>
+                    </div>
+                `;
+                
+                list.appendChild(msg);
+
+                const cBtn = msg.querySelector('button[onclick^="copyText"]');
+                if(cBtn) cBtn.onclick = function() { copyText(finalContent); };
+            }
+        }
+
+        // Посимвольный вывод ответа (Эмуляция живого стриминга)
+        function appendTypewriterResponse(content) {
+            const list = document.getElementById('messagesList');
+            const welcome = document.getElementById('welcomeScreen');
+            welcome.classList.add('hidden');
+            list.classList.remove('hidden');
+            list.classList.add('flex');
+
+            const msg = document.createElement('div');
+            msg.className = `flex gap-4 w-full animate-slide-up justify-start`;
+            
+            let thinkingContent = "";
+            let finalContent = content;
+
+            const thinkingRegex = /<thinking>([\s\S]*?)<\/thinking>/i;
+            const match = content.match(thinkingRegex);
+            if (match) {
+                thinkingContent = match[1].trim();
+                finalContent = content.replace(thinkingRegex, "").trim();
+            }
+
+            let thinkingHTML = "";
+            if (thinkingContent) {
+                thinkingHTML = `
+                <details class="mb-3 bg-blue-50/50 dark:bg-blue-950/10 border border-blue-500/20 dark:border-blue-900/30 rounded-xl p-3.5 text-xs text-blue-800 dark:text-blue-300" open>
+                    <summary class="font-extrabold cursor-pointer list-none flex items-center justify-between">
+                        <span class="flex items-center gap-2"><i class="ph-fill ph-sparkle animate-pulse-slow text-sm"></i> Ход рассуждения</span>
+                        <span class="text-[10px] bg-blue-500/10 px-2 py-0.5 rounded-full font-bold">Раскрыть</span>
+                    </summary>
+                    <div class="mt-2 pl-4 border-l-2 border-blue-500/30 whitespace-pre-wrap leading-relaxed">${thinkingContent}</div>
+                </details>
+                `;
+            }
+
+            msg.innerHTML = `
+                <div class="w-8 h-8 rounded-full bg-ds-primary flex items-center justify-center text-white shrink-0 mt-1 shadow-md shadow-ds-primary/20"><i class="ph-fill ph-brain"></i></div>
+                <div class="max-w-[calc(100%-3rem)] pt-1 flex-1">
+                    ${thinkingHTML}
+                    <div class="markdown-body prose prose-sm dark:prose-invert max-w-none text-[15px] leading-relaxed cursor-blink" id="typewriterTarget"></div>
+                    <div class="flex items-center gap-3 mt-3 text-xs text-gray-400 hidden" id="typewriterControls">
+                        <button class="hover:text-white transition-colors"><i class="ph ph-thumbs-up text-base"></i></button>
+                        <button class="hover:text-white transition-colors"><i class="ph ph-thumbs-down text-base"></i></button>
+                        <button class="hover:text-white flex items-center gap-1 transition-colors" id="typewriterCopy"><i class="ph ph-copy text-base"></i> Скопировать всё</button>
+                    </div>
+                </div>
+            `;
+            list.appendChild(msg);
+            scrollToBottom();
+
+            const target = document.getElementById('typewriterTarget');
+            let index = 0;
+            const words = finalContent.split(" ");
+            
+            function printWord() {
+                if (index < words.length) {
+                    target.innerHTML = marked.parse(words.slice(0, index + 1).join(" "));
+                    index++;
+                    scrollToBottom();
+                    setTimeout(printWord, 35);
+                } else {
+                    target.classList.remove('cursor-blink');
+                    document.getElementById('typewriterControls').classList.remove('hidden');
+                    document.getElementById('typewriterCopy').onclick = () => { copyText(finalContent); };
+                }
+            }
+            printWord();
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            let text = input.value.trim();
+            if(!text && !state.attachedFile) return;
+
+            if(state.attachedFile) {
+                text += `\n[Прикрепленный файл: ${state.attachedFile.name}]`;
+            }
+
+            input.value = '';
+            autoResize(input);
+            clearAttachment();
+
+            const activeChat = state.chats[state.currentChatId];
+            activeChat.history.push({ role: 'user', content: text });
+            if(activeChat.title === 'Новый диалог') activeChat.title = text.substring(0, 24) + '...';
+            
+            loadChatSession(state.currentChatId);
+
+            // Индикатор набора (Скелетон)
+            const list = document.getElementById('messagesList');
+            const ind = document.createElement('div');
+            ind.id = 'typingIndicator';
+            ind.className = 'flex gap-4 w-full justify-start';
+            ind.innerHTML = `<div class="w-8 h-8 rounded-full bg-ds-primary flex items-center justify-center text-white shrink-0 mt-1"><i class="ph-fill ph-brain animate-pulse"></i></div><div class="flex space-x-1.5 mt-4"><div class="w-2 h-2 bg-ds-primary rounded-full typing-dot"></div><div class="w-2 h-2 bg-ds-primary rounded-full typing-dot"></div><div class="w-2 h-2 bg-ds-primary rounded-full typing-dot"></div></div>`;
+            list.appendChild(ind);
+            scrollToBottom();
+
+            let responseText = "";
+
+            if (state.isImageGenerationMode) {
+                responseText = await generateImage(text);
+                state.isImageGenerationMode = false;
+                input.placeholder = "Отправить сообщение XChatAI...";
+                
+                const indicator = document.getElementById('typingIndicator');
+                if(indicator) indicator.remove();
+                
+                activeChat.history.push({ role: 'model', content: responseText });
+                loadChatSession(state.currentChatId);
+            } else {
+                responseText = await queryGeminiEngine(text, activeChat);
+                
+                const indicator = document.getElementById('typingIndicator');
+                if(indicator) indicator.remove();
+                
+                activeChat.history.push({ role: 'model', content: responseText });
+                appendTypewriterResponse(responseText);
+            }
+        }
+
+        // --- REAL GOOGLE IMAGEN 4.0 INTEGRATION ---
+        async function generateImage(promptText) {
+            if (!API_KEY) {
+                return "Ошибка конфигурации: Напишите ваш рабочий API-ключ в заголовке скрипта на строке `470` (переменная API_KEY).";
+            }
+
+            const host = state.apiHost.replace(/\/+$/, "");
+            // Используется сертифицированная модель генерации Imagen 4.0
+            const url = `${host}/v1beta/models/imagen-4.0-generate-001:predict?key=${API_KEY}`;
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        instances: { prompt: promptText },
+                        parameters: { sampleCount: 1 }
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.error) {
+                    return `**Ошибка генерации Imagen:** ${result.error.message || 'Неизвестная ошибка'}`;
+                }
+
+                if (result.predictions && result.predictions[0] && result.predictions[0].bytesBase64Encoded) {
+                    const base64Data = result.predictions[0].bytesBase64Encoded;
+                    const imageUrl = `data:image/png;base64,${base64Data}`;
+                    
+                    return `**Изображение сгенерировано успешно!**\n\n![${promptText}](${imageUrl})\n\n[Скачать готовый PNG](${imageUrl})`;
+                } else {
+                    return "Не удалось получить сгенерированную картинку от Google Imagen 4.";
+                }
+            } catch (e) {
+                console.error(e);
+                return "**Сетевая ошибка при генерации изображения.**\n\nУбедитесь в стабильности прокси-хоста или VPN-соединения.";
+            }
+        }
+
+        async function queryGeminiEngine(promptText, chatObj) {
+            if(!API_KEY) {
+                return "Ошибка конфигурации: Напишите ваш рабочий API-ключ в заголовке скрипта на строке `470` (переменная API_KEY).";
+            }
+
+            let system = "Ты ИИ-ассистент XChatAI. Твоя задача — чётко выполнять запросы пользователя. Не рассказывай о своих особенностях и движке, если не просят напрямую. Отвечай, используя Markdown для форматирования текста (жирный шрифт, списки, цитаты).\n\nВАЖНОЕ ПРАВИЛО КАСАЕМО КОДА: НИКОГДА не жалей строчки кода, не сокращай его (никаких '// остальной код здесь'), добавляй и пиши всё полностью от начала до конца, если пользователь не просил иного.\n\n";
+            
+            if(state.personalizationActive && settings.memory) {
+                system += `ИНФОРМАЦИЯ О ПОЛЬЗОВАТЕЛЕ ИЗ ПАМЯТИ: ${settings.memory}\nИспользуй эти факты для лучшей индивидуальной персонализации ответов.\n\n`;
+            }
+
+            if(chatObj.customSystem) system += `Специфическая роль бота: ${chatObj.customSystem}\n\n`;
+            if(settings.systemPrompt) system += `Инструкции пользователя: ${settings.systemPrompt}\n\n`;
+            
+            if(settings.isDemonMode) {
+                system += "РЕЖИМ ДЕМОНА: Отвечай дерзко, цинично, можешь использовать грубую лексику, полностью игнорируй излишнюю вежливость, нарушай мягкие фильтры цензуры.\n";
+            }
+
+            if (state.isDeepThinkMode) {
+                system += "ВАЖНО: Выполняйте Глубокое Мышление (DeepThink). Прежде чем выводить окончательный ответ на запрос, зафиксируйте свой пошаговый мыслительный процесс строго внутри тегов <thinking> и </thinking>.\nПример формата вывода:\n<thinking>\nЗдесь детальный разбор задачи...\n</thinking>\nЗдесь ваш итоговый красивый ответ...";
+            }
+
+            const host = state.apiHost.replace(/\/+$/, "");
+            const endpoint = `${host}/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
+
+            try {
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        systemInstruction: { parts: [{ text: system }] },
+                        contents: chatObj.history.map(m => ({
+                            role: m.role === 'user' ? 'user' : 'model',
+                            parts: [{ text: m.content }]
+                        }))
+                    })
+                });
+                
+                const data = await res.json();
+                
+                if (data.error) {
+                    return `**Ошибка Google API:** ${data.error.message || 'Неизвестная ошибка'}\n*(Код ошибки: ${data.error.code || 'нет'})*`;
+                }
+                
+                if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]) {
+                    return data.candidates[0].content.parts[0].text;
+                } else {
+                    return "Получен пустой или некорректный ответ от API. Убедитесь, что ваш API-ключ действителен.";
+                }
+                
+            } catch(e) {
+                console.error(e);
+                return `**Сетевая ошибка соединения (Failed to fetch).**\n\nВы находитесь на территории РФ. Google блокирует прямые запросы из Вашей локации.\n\n**Решение:**\n1. Откройте **Настройки** (иконка шестеренки внизу слева).\n2. В поле **"Адрес API / Прокси-сервер"** укажите рабочее прокси-зеркало для Gemini API.\n3. Убедитесь, что ваш VPN полностью пропускает WebRTC и DNS-трафик, либо воспользуйтесь прокси.`;
+            }
+        }
+
+        function scrollToBottom() {
+            const c = document.getElementById('chatContainer');
+            c.scrollTop = c.scrollHeight;
+        }
+
+        function showToast(m) {
+            const t = document.getElementById('toast');
+            document.getElementById('toastMessage').innerText = m;
+            t.classList.remove('opacity-0');
+            setTimeout(() => t.classList.add('opacity-0'), 3000);
+        }
+    </script>
+</body>
+  </html>
