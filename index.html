@@ -456,28 +456,46 @@
             if(settings.memory) systemInstructions += `Контекстная память ядра о пользователе:\n${settings.memory}\n\n`;
             if(settings.systemPrompt) systemInstructions += `Инструкция характера: ${settings.systemPrompt}\n`;
 
-            // Для GET-запроса собираем плоский контекст диалога, чтобы модель знала историю
-            let fullContext = systemInstructions + "\n=== ИСТОРИЯ ДИАЛОГА ===\n";
+            const messages = [{ role: 'system', content: systemInstructions }];
+            
+            // Собираем историю диалога в стандартный формат
             chatObj.history.forEach(m => {
-                const label = m.role === 'user' ? 'Пользователь' : 'KoreX';
-                fullContext += `${label}: ${m.content}\n`;
+                messages.push({ role: m.role, content: m.content });
             });
-            fullContext += "KoreX:";
 
-            // Корректные идентификаторы для стабильного GET-эндпоинта Pollinations
-            const fallbackModel = state.currentModel === 'openai' ? 'gpt-4o' : 'mistral';
-            const requestUrl = `https://text.pollinations.ai/${encodeURIComponent(fullContext)}?model=${fallbackModel}&cache=false`;
+            // Выбираем модель (openai = GPT-4o эквивалент, mistral = быстрый аналог)
+            const targetModel = state.currentModel === 'openai' ? 'openai' : 'mistral';
 
             try {
-                const resFallback = await fetch(requestUrl);
-                if (resFallback.ok) {
-                    const textResponse = await resFallback.text();
-                    if (textResponse.trim()) return textResponse;
+                // Прямой POST-запрос к чистому эндпоинту Pollinations
+                const response = await fetch('https://text.pollinations.ai/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        messages: messages,
+                        model: targetModel
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Код ${response.status}`);
                 }
-                throw new Error("Пустой ответ или ошибка сервера");
-            } catch(e) {
-                console.error("Сбой GET-канала связи:", e);
-                return `**Ошибка сетевого шлюза.** Поток заблокирован или отсутствует соединение с децентрализованными узлами.`;
+                
+                // РЕШЕНИЕ БАГА: Читаем как чистый текст, а не как JSON!
+                const textResponse = await response.text();
+                
+                if (!textResponse || textResponse.trim() === "") {
+                    return "Получен пустой пакет данных.";
+                }
+                
+                return textResponse;
+
+            } catch (error) {
+                console.error("Ошибка сети:", error);
+                // Теперь мы будем видеть реальную причину прямо в чате, если вдруг что
+                return `**Ошибка шлюза.** Детали: \`${error.message}\`.`;
             }
         }
 
