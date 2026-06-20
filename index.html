@@ -1,506 +1,133 @@
 <!DOCTYPE html>
-<html lang="ru" class="dark">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KoreX - Сверхсистема</title>
-    
-    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        kx: {
-                            bg: '#000000',
-                            panel: '#1e1e1e',
-                            panelHover: '#2a2a2a',
-                            border: '#333333',
-                            primary: '#ffffff',
-                            text: '#f3f4f6',
-                            textMuted: '#9ca3af'
-                        }
-                    },
-                    animation: {
-                        'slide-up': 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-                        'fade-in': 'fadeIn 0.2s ease-out forwards',
-                    },
-                    keyframes: {
-                        slideUp: {
-                            '0%': { transform: 'translateY(15px)', opacity: '0' },
-                            '100%': { transform: 'translateY(0)', opacity: '1' }
-                        },
-                        fadeIn: {
-                            '0%': { opacity: '0' },
-                            '100%': { opacity: '1' }
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-dark.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
-
-    <style>
-        * { -webkit-tap-highlight-color: transparent; outline: none !important; }
-        ::-webkit-scrollbar { width: 4px; height: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 99px; }
-        ::-webkit-scrollbar-thumb:hover { background: #555; }
-        
-        .prose :not(pre) > code { 
-            background-color: rgba(255, 255, 255, 0.1) !important; 
-            color: #fff !important; 
-            padding: 0.15em 0.35em; 
-            border-radius: 0.25rem; 
-            font-size: 0.85em; 
-        }
-        .prose :not(pre) > code::before, .prose :not(pre) > code::after { content: "" !important; }
-
-        .code-block-wrapper { margin: 1.25em 0; border-radius: 0.75rem; overflow: hidden; border: 1px solid #333; }
-        .code-block-header { display: flex; justify-content: space-between; padding: 0.5rem 1rem; background-color: #111; color: #888; font-size: 0.8rem; border-bottom: 1px solid #333; }
-        .code-block-content { background-color: #1e1e1e; padding: 1rem; overflow-x: auto; }
-        .code-block-content pre { margin: 0 !important; background: transparent !important; }
-
-        @media (max-width: 768px) {
-            .sidebar { transform: translateX(-100%); transition: transform 0.3s ease; position: absolute; z-index: 50; height: 100%; }
-            .sidebar.open { transform: translateX(0); }
-        }
-
-        .chat-item-active { background-color: rgba(255, 255, 255, 0.05) !important; border-left: 3px solid #fff; }
-        .cursor-blink::after { content: "▊"; animation: blink 0.8s step-start infinite; color: #fff; margin-left: 2px; }
-        @keyframes blink { 50% { opacity: 0; } }
-
-        .toggle-checkbox:checked { right: 0; border-color: #fff; }
-        .toggle-checkbox:checked + .toggle-label { background-color: #fff; }
-        .toggle-checkbox:checked + .toggle-label:after { transform: translateX(100%); border-color: white; }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>KoreX · мессенджер</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="bg-kx-bg text-kx-text h-screen flex overflow-hidden font-sans select-none">
+<body>
 
-    <div id="sidebarOverlay" class="fixed inset-0 bg-black/80 z-40 hidden backdrop-blur-sm" onclick="toggleSidebar()"></div>
-
-    <aside id="sidebar" class="sidebar w-72 flex-shrink-0 bg-kx-panel border-r border-kx-border flex flex-col z-50 md:z-10">
-        <div class="p-4 border-b border-kx-border flex items-center justify-between">
-            <div class="flex items-center gap-2 cursor-pointer" onclick="startNewChat()">
-                <div class="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-black">
-                    <i class="ph-bold ph-share-network text-lg"></i>
+<div class="phone" id="app">
+    <!-- ШАПКА -->
+    <div class="header">
+        <div class="header-left">
+            <div class="avatar" id="avatarBtn"><i class="fas fa-paper-plane"></i></div>
+            <div class="header-info">
+                <div class="header-name"></div>
+                <div class="header-status" id="connectionStatus">
+                    <i class="fas fa-circle" style="color: #4cd964; font-size: 10px;"></i>
+                    <span id="statusText">онлайн</span>
                 </div>
-                <span class="font-bold text-lg">KoreX</span>
             </div>
-            <button onclick="toggleSidebar()" class="md:hidden text-gray-400 hover:text-white">
-                <i class="ph ph-x text-xl"></i>
-            </button>
         </div>
-
-        <div class="p-3">
-            <button onclick="startNewChat()" class="w-full flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2.5 rounded-xl transition-all text-sm font-semibold">
-                <i class="ph ph-plus-bold"></i> Новый диалог
-            </button>
-        </div>
-
-        <div class="flex-1 overflow-y-auto p-3 space-y-1" id="chatList"></div>
-
-        <div class="p-3 border-t border-kx-border flex items-center justify-between">
-            <button onclick="openSettings()" class="p-2.5 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors w-full flex items-center justify-center gap-2">
-                <i class="ph ph-gear text-xl"></i> Конфигурация ядра
-            </button>
-        </div>
-    </aside>
-
-    <div class="flex-1 flex overflow-hidden relative min-w-0 flex-col">
-        
-        <header class="h-14 flex items-center justify-between px-4 border-b border-kx-border bg-kx-bg z-10">
-            <div class="flex items-center gap-3">
-                <button onclick="toggleSidebar()" class="p-1.5 rounded-lg hover:bg-kx-panel text-gray-300">
-                    <i class="ph ph-list text-xl"></i>
-                </button>
-                
-                <div class="flex items-center gap-2">
-                    <div class="w-2 h-2 bg-green-500 rounded-full shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
-                    <span class="font-semibold text-sm hidden sm:block" id="headerModelName">KoreX 2 (GPT-4o)</span>
-                </div>
-            </div>
-
-            <div class="relative group absolute left-1/2 transform -translate-x-1/2">
-                <button class="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-kx-panel hover:bg-kx-panelHover border border-kx-border transition-colors text-sm font-medium">
-                    <span id="currentModelDisplay">KoreX 2 (GPT-4o)</span>
-                    <i class="ph ph-caret-down text-gray-400 text-xs"></i>
-                </button>
-                <div class="absolute left-1/2 transform -translate-x-1/2 top-full mt-2 w-64 bg-kx-panel border border-kx-border rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 py-1.5">
-                    <button onclick="selectModel('mistral', 'KoreX 1 (Mistral)')" class="w-full text-left px-4 py-2.5 text-sm hover:bg-white/5 transition-colors">KoreX 1 (Mistral)</button>
-                    <button onclick="selectModel('openai', 'KoreX 2 (GPT-4o)')" class="w-full text-left px-4 py-2.5 text-sm hover:bg-white/5 text-white transition-colors">KoreX 2 (GPT-4o)</button>
-                </div>
-            </div>
-
-            <button onclick="clearCurrentChat()" class="p-2 rounded-lg hover:bg-kx-panel text-gray-400 hover:text-white transition-colors" title="Очистить чат">
-                <i class="ph ph-eraser text-xl"></i>
-            </button>
-        </header>
-
-        <div id="chatContainer" class="flex-1 overflow-y-auto pt-4 pb-40 scroll-smooth flex flex-col">
-            
-            <div id="welcomeScreen" class="flex-1 flex flex-col items-center justify-center px-4 animate-fade-in -mt-10">
-                <div class="w-20 h-20 bg-kx-panel rounded-3xl flex items-center justify-center mb-6 shadow-lg border border-kx-border">
-                    <i class="ph-bold ph-share-network text-4xl text-white"></i>
-                </div>
-                <h1 class="text-3xl font-bold mb-3 text-center text-white tracking-tight">Чем займемся сегодня?</h1>
-                <p class="text-gray-400 text-center max-w-sm text-[15px]">KoreX подключена к сети. Спросите меня о чем угодно.</p>
-            </div>
-
-            <div id="messagesList" class="hidden flex-col max-w-3xl mx-auto w-full px-4 py-6 space-y-6"></div>
-        </div>
-
-        <div class="absolute bottom-0 left-0 right-0 px-4 pb-6 bg-gradient-to-t from-kx-bg via-kx-bg to-transparent pt-10">
-            <div class="max-w-3xl mx-auto flex flex-col bg-kx-panel border border-kx-border rounded-[24px] p-2 relative shadow-2xl">
-                <textarea id="userInput" rows="1" placeholder="Задайте вопрос Сверхсистеме..." class="w-full bg-transparent border-none outline-none resize-none max-h-32 px-3 pt-3 pb-2 text-white text-[15px] placeholder-gray-500" oninput="autoResize(this)" onkeydown="handleEnter(event)"></textarea>
-                
-                <div class="flex items-center justify-between px-2 pb-1 pt-2">
-                    <div class="flex items-center gap-2">
-                        <button class="p-2 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors" onclick="showToast('Модуль инъекции файлов проектируется')">
-                            <i class="ph ph-plus text-xl"></i>
-                        </button>
-                        <button id="micBtn" onclick="toggleVoiceRecording()" class="p-2 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
-                            <i class="ph ph-microphone text-xl"></i>
-                        </button>
-                        
-                        <div class="flex items-center bg-black border border-kx-border rounded-full px-2 py-1 gap-2 ml-1 cursor-pointer select-none" onclick="toggleDeepThinkVisual()">
-                            <i class="ph ph-brain text-gray-400 text-lg" id="brainIcon"></i>
-                            <div class="relative inline-block w-8 mr-2 align-middle select-none transition duration-200 ease-in">
-                                <input type="checkbox" name="toggle" id="deepThinkToggle" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-transform duration-200 ease-in-out" style="top: 2px; left: 2px;" checked/>
-                                <label for="deepThinkToggle" class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-700 cursor-pointer transition-colors duration-200 ease-in-out"></label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <button onclick="sendMessage()" class="w-9 h-9 rounded-full bg-white text-black hover:bg-gray-200 flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed shrink-0" id="sendBtn" disabled>
-                        <i class="ph-fill ph-paper-plane-right text-lg -ml-0.5"></i>
-                    </button>
-                </div>
-            </div>
-            <div class="text-center mt-4">
-                <span class="text-[12px] text-gray-500 font-medium">Беспроводной суверенный шлюз нейросети активен.</span>
-            </div>
+        <div class="header-actions">
+            <i class="fas fa-search" id="searchBtn"></i>
+            <i class="fas fa-ellipsis-v" id="menuBtn"></i>
         </div>
     </div>
 
-    <div id="settingsModal" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center backdrop-blur-sm px-4">
-        <div class="bg-kx-panel w-full max-w-lg rounded-2xl overflow-hidden border border-kx-border shadow-2xl">
-            <div class="p-5 border-b border-kx-border flex justify-between items-center">
-                <h3 class="text-lg font-bold">Параметры Матрицы KoreX</h3>
-                <button onclick="closeSettings()" class="text-gray-400 hover:text-white"><i class="ph ph-x text-xl"></i></button>
-            </div>
-            <div class="p-6 space-y-5">
-                <div>
-                    <label class="block text-xs font-semibold text-gray-500 mb-2 uppercase">Глобальный паттерн поведения (Промпт)</label>
-                    <textarea id="systemPromptInput" rows="3" class="w-full bg-black border border-kx-border rounded-xl p-3.5 text-sm resize-none outline-none focus:border-white text-white" placeholder="Конфигурация характера..."></textarea>
+    <div class="main-content">
+        <!-- Список чатов -->
+        <div class="chat-list" id="chatList">
+            <!-- Общий чат (всегда первый) -->
+            <div class="chat-item" data-chat="general" id="generalChat">
+                <div class="chat-avatar channel"><i class="fas fa-hashtag"></i></div>
+                <div class="chat-info">
+                    <div class="chat-name"><span># Общий чат</span><span id="generalTime"></span></div>
+                    <div class="chat-preview"><span class="msg-text" id="generalPreview">Добро пожаловать в KoreX!</span><span class="badge channel-badge" id="generalBadge">0</span></div>
                 </div>
-                <div>
-                    <div class="flex items-center justify-between mb-2">
-                        <label class="block text-xs font-semibold text-gray-500 uppercase">Постоянные фрагменты памяти</label>
-                        <button onclick="clearMemory()" class="text-xs text-red-400 hover:text-red-300">Стереть логи</button>
-                    </div>
-                    <textarea id="aiMemoryInput" rows="3" class="w-full bg-black border border-kx-border rounded-xl p-3.5 text-sm resize-none outline-none focus:border-white text-white" placeholder="Контекстные данные пользователя..."></textarea>
-                </div>
-            </div>
-            <div class="p-4 bg-black border-t border-kx-border flex justify-end">
-                <button onclick="saveSettings()" class="bg-white text-black hover:bg-gray-200 px-5 py-2.5 rounded-xl text-sm font-bold transition-colors">Обновить конфигурацию</button>
             </div>
         </div>
+
+        <!-- Окно чата -->
+        <div class="chat-window" id="chatWindow">
+            <div class="chat-window-header">
+                <span class="back-btn" id="backBtn"><i class="fas fa-arrow-left"></i></span>
+                <span class="chat-user" id="chatUserName">Общий чат <i class="fas fa-hashtag" style="font-size: 14px; color: #e8a838; margin-left: 6px;"></i></span>
+            </div>
+            <div class="messages-area" id="messagesArea">
+                <div class="message system">📢 Добро пожаловать в общий чат KoreX!</div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="msgInput" placeholder="Сообщение...">
+                <button class="send-btn" id="sendBtn"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+
+        <!-- Плавающая кнопка создания -->
+        <div class="floating-add" id="addChatBtn"><i class="fas fa-plus"></i></div>
     </div>
 
-    <div id="toast" class="fixed top-5 left-1/2 transform -translate-x-1/2 bg-white text-black px-4 py-2.5 rounded-xl shadow-2xl opacity-0 transition-opacity duration-300 z-[100] pointer-events-none flex items-center gap-2 text-sm font-medium">
-        <span id="toastMessage"></span>
+    <!-- Нижняя навигация -->
+    <div class="bottom-nav">
+        <i class="fas fa-list-ul active" id="navChats"></i>
+        <i class="fas fa-users" id="navContacts"></i>
+        <i class="fas fa-phone-alt" id="navCalls"></i>
+        <i class="fas fa-cog" id="navSettings"></i>
     </div>
+</div>
 
-    <script>
-        let state = {
-            currentChatId: null,
-            chats: {}, 
-            currentModel: "openai", 
-            isDeepThinkMode: true
-        };
+<!-- Модальное окно создания чата -->
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal-box">
+        <h3><i class="fas fa-plus-circle" style="margin-right: 8px;"></i>Создать чат</h3>
+        <input type="text" id="newChatName" placeholder="Название чата...">
+        <select id="chatTypeSelect">
+            <option value="chat">💬 Чат</option>
+            <option value="group">👥 Группа</option>
+        </select>
+        <div class="modal-actions">
+            <button class="btn-cancel" id="modalCancel">Отмена</button>
+            <button class="btn-confirm" id="modalConfirm">Создать</button>
+        </div>
+    </div>
+</div>
 
-        let settings = { systemPrompt: "", memory: "" };
+<!-- Боковое меню настроек -->
+<div class="settings-overlay" id="settingsOverlay"></div>
+<div class="settings-panel" id="settingsPanel">
+    <span class="close-settings" id="closeSettings"><i class="fas fa-times"></i></span>
+    <h3><i class="fas fa-cog" style="margin-right: 10px;"></i>Настройки</h3>
+    
+    <div class="settings-item" id="themeToggle">
+        <span><i class="fas fa-moon"></i> Тёмная тема</span>
+        <div class="toggle active" id="themeSwitch"></div>
+    </div>
+    
+    <div class="settings-item" id="notifToggle">
+        <span><i class="fas fa-bell"></i> Уведомления</span>
+        <div class="toggle active" id="notifSwitch"></div>
+    </div>
+    
+    <div class="settings-item" id="clearChats">
+        <span><i class="fas fa-trash"></i> Очистить чаты</span>
+        <i class="fas fa-chevron-right" style="color: #5f7c9c;"></i>
+    </div>
+    
+    <div class="settings-item" id="aboutKorex">
+        <span><i class="fas fa-info-circle"></i> О KoreX</span>
+        <i class="fas fa-chevron-right" style="color: #5f7c9c;"></i>
+    </div>
+    
+    <div class="settings-item" id="logoutBtn">
+        <span><i class="fas fa-sign-out-alt" style="color: #e47a4a;"></i> Выйти</span>
+        <i class="fas fa-chevron-right" style="color: #5f7c9c;"></i>
+    </div>
+</div>
 
-        window.addEventListener('DOMContentLoaded', () => {
-            startNewChat();
-            renderChatsList();
-            
-            const savedMemory = localStorage.getItem('korex_memory') || "";
-            settings.memory = savedMemory;
-            document.getElementById('aiMemoryInput').value = settings.memory;
+<!-- Подключаем Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 
-            const cb = document.getElementById('deepThinkToggle');
-            cb.checked = state.isDeepThinkMode;
-            updateDeepThinkUI();
+<!-- Подключаем наши скрипты -->
+<script src="config/firebase-config.js"></script>
+<script src="js/firebase-init.js"></script>
+<script src="js/chat-manager.js"></script>
+<script src="js/ui-manager.js"></script>
+<script src="js/app.js"></script>
 
-            cb.addEventListener('change', (e) => {
-                state.isDeepThinkMode = e.target.checked;
-                updateDeepThinkUI();
-            });
-        });
-
-        function toggleDeepThinkVisual() {
-            const cb = document.getElementById('deepThinkToggle');
-            cb.checked = !cb.checked;
-            state.isDeepThinkMode = cb.checked;
-            updateDeepThinkUI();
-        }
-
-        function updateDeepThinkUI() {
-            const icon = document.getElementById('brainIcon');
-            if(state.isDeepThinkMode) {
-                icon.classList.add('text-white');
-                icon.classList.remove('text-gray-400');
-                selectModel('openai', 'KoreX 2 (GPT-4o)');
-            } else {
-                icon.classList.remove('text-white');
-                icon.classList.add('text-gray-400');
-                selectModel('mistral', 'KoreX 1 (Mistral)');
-            }
-        }
-
-        function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('open');
-            document.getElementById('sidebarOverlay').classList.toggle('hidden');
-        }
-
-        function autoResize(el) {
-            el.style.height = 'auto';
-            el.style.height = (el.scrollHeight < 128 ? el.scrollHeight : 128) + 'px';
-            document.getElementById('sendBtn').disabled = el.value.trim().length === 0;
-        }
-
-        function handleEnter(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                if (!document.getElementById('sendBtn').disabled) sendMessage();
-            }
-        }
-
-        function selectModel(modelId, displayName) {
-            state.currentModel = modelId;
-            document.getElementById('currentModelDisplay').innerText = displayName;
-            document.getElementById('headerModelName').innerText = displayName;
-        }
-
-        function clearCurrentChat() {
-            if(state.currentChatId && state.chats[state.currentChatId]) {
-                state.chats[state.currentChatId].history = [];
-                loadChatSession(state.currentChatId);
-                showToast("Вычислительный поток очищен");
-            }
-        }
-
-        function renderChatsList() {
-            const list = document.getElementById('chatList');
-            list.innerHTML = '';
-            Object.values(state.chats).reverse().forEach(chat => {
-                if(chat.history.length === 0 && chat.id !== state.currentChatId) return;
-                
-                const item = document.createElement('div');
-                item.className = `flex items-center gap-2.5 p-2.5 rounded-xl text-sm cursor-pointer transition-colors ${state.currentChatId === chat.id ? 'bg-white/10 text-white chat-item-active' : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'}`;
-                item.innerHTML = `
-                    <i class="ph ph-chat-circle shrink-0"></i>
-                    <span class="truncate flex-1">${chat.title}</span>
-                `;
-                item.onclick = () => loadChatSession(chat.id);
-                list.appendChild(item);
-            });
-        }
-
-        function loadChatSession(id) {
-            state.currentChatId = id;
-            renderChatsList();
-            const chat = state.chats[id];
-            const list = document.getElementById('messagesList');
-            const welcome = document.getElementById('welcomeScreen');
-            
-            if(!chat || chat.history.length === 0) {
-                list.innerHTML = ''; 
-                list.classList.add('hidden'); 
-                welcome.classList.remove('hidden'); 
-                welcome.classList.add('flex');
-                return;
-            }
-            
-            welcome.classList.add('hidden'); 
-            welcome.classList.remove('flex');
-            list.classList.replace('hidden', 'flex'); 
-            list.innerHTML = '';
-            
-            chat.history.forEach(msg => appendMessageToDOM(msg.role, msg.content));
-            scrollToBottom();
-        }
-
-        function startNewChat() {
-            const newId = 'chat_' + Date.now();
-            state.chats[newId] = { id: newId, title: 'Новый диалог', history: [] };
-            loadChatSession(newId);
-            if(window.innerWidth <= 768 && document.getElementById('sidebar').classList.contains('open')) toggleSidebar();
-        }
-
-        function openSettings() { 
-            document.getElementById('systemPromptInput').value = settings.systemPrompt;
-            document.getElementById('aiMemoryInput').value = settings.memory;
-            document.getElementById('settingsModal').classList.remove('hidden'); 
-        }
-        function closeSettings() { document.getElementById('settingsModal').classList.add('hidden'); }
-        function saveSettings() {
-            settings.systemPrompt = document.getElementById('systemPromptInput').value;
-            settings.memory = document.getElementById('aiMemoryInput').value.trim();
-            localStorage.setItem('korex_memory', settings.memory);
-            closeSettings();
-            showToast("Конфигурация ядра обновлена");
-        }
-        function clearMemory() { 
-            settings.memory = ""; document.getElementById('aiMemoryInput').value = ""; localStorage.removeItem('korex_memory'); showToast("Память очищена"); 
-        }
-
-        let recognition = null;
-        if('webkitSpeechRecognition' in window) {
-            recognition = new webkitSpeechRecognition(); recognition.lang = 'ru-RU';
-            recognition.onresult = (e) => { document.getElementById('userInput').value = e.results[0][0].transcript; autoResize(document.getElementById('userInput')); };
-        }
-        function toggleVoiceRecording() { if(!recognition) return; recognition.start(); showToast("Ввод голоса активен..."); }
-
-        marked.setOptions({ highlight: (c, l) => hljs.highlightAuto(c).value, breaks: true });
-        const customRenderer = new marked.Renderer();
-        customRenderer.code = function(code, language) {
-            return `<div class="code-block-wrapper not-prose">
-                <div class="code-block-header"><span>${language || 'code'}</span>
-                    <button class="hover:text-white transition-colors flex items-center gap-1" onclick="copyCodeBlock(this)"><i class="ph ph-copy"></i> Копировать</button>
-                </div>
-                <div class="code-block-content"><pre><code class="hljs">${hljs.highlightAuto(code).value}</code></pre></div>
-            </div>`;
-        };
-        marked.use({ renderer: customRenderer });
-        window.copyCodeBlock = (btn) => copyText(btn.closest('.code-block-wrapper').querySelector('code').innerText, btn);
-
-        function copyText(text, btn) {
-            navigator.clipboard.writeText(text);
-            if(btn) { btn.innerHTML = `<i class="ph ph-check"></i> Успешно`; setTimeout(() => btn.innerHTML = `<i class="ph ph-copy"></i> Копировать`, 2000); }
-            else showToast("Скопировано в буфер");
-        }
-
-        function appendMessageToDOM(role, content) {
-            const list = document.getElementById('messagesList');
-            document.getElementById('welcomeScreen').classList.add('hidden');
-            document.getElementById('welcomeScreen').classList.remove('flex');
-            list.classList.replace('hidden', 'flex');
-            
-            const msg = document.createElement('div');
-            msg.className = `flex gap-4 w-full animate-slide-up ${role === 'user' ? 'justify-end' : 'justify-start'}`;
-            
-            if(role === 'user') {
-                msg.innerHTML = `<div class="max-w-[85%] bg-kx-panel border border-kx-border rounded-2xl rounded-tr-sm px-4 py-3"><div class="whitespace-pre-wrap text-[15px]">${content.replace(/</g, '&lt;')}</div></div>`;
-            } else {
-                msg.innerHTML = `<div class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-black shrink-0 mt-1"><i class="ph-bold ph-share-network"></i></div>
-                <div class="max-w-[calc(100%-3rem)] pt-1 flex-1"><div class="prose prose-sm dark:prose-invert max-w-none text-[15px] leading-relaxed text-gray-200">${marked.parse(content)}</div></div>`;
-            }
-            list.appendChild(msg);
-        }
-
-        function appendTypewriterResponse(content) {
-            const list = document.getElementById('messagesList');
-            const msg = document.createElement('div');
-            msg.className = `flex gap-4 w-full animate-slide-up justify-start`;
-            msg.innerHTML = `<div class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-black shrink-0 mt-1"><i class="ph-bold ph-share-network"></i></div>
-            <div class="max-w-[calc(100%-3rem)] pt-1 flex-1"><div class="prose prose-sm dark:prose-invert max-w-none text-[15px] leading-relaxed text-gray-200 cursor-blink" id="typewriterTarget"></div></div>`;
-            list.appendChild(msg);
-            
-            const target = document.getElementById('typewriterTarget');
-            let index = 0; const words = content.split(" ");
-            function printWord() {
-                if (index < words.length) { target.innerHTML = marked.parse(words.slice(0, index + 1).join(" ")); index++; scrollToBottom(); setTimeout(printWord, 12); } 
-                else { target.classList.remove('cursor-blink'); }
-            }
-            printWord();
-        }
-
-        async function sendMessage() {
-            const input = document.getElementById('userInput');
-            let text = input.value.trim(); if(!text) return;
-            
-            input.value = ''; autoResize(input);
-            const activeChat = state.chats[state.currentChatId];
-            activeChat.history.push({ role: 'user', content: text });
-            
-            if(activeChat.title === 'Новый диалог') {
-                activeChat.title = text.substring(0, 20) + (text.length > 20 ? '...' : '');
-                renderChatsList();
-            }
-            
-            loadChatSession(state.currentChatId);
-
-            const ind = document.createElement('div'); ind.id = 'typingIndicator'; ind.className = 'flex gap-4 w-full justify-start';
-            ind.innerHTML = `<div class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-black shrink-0 mt-1"><i class="ph-bold ph-share-network animate-pulse"></i></div><div class="flex space-x-1 mt-4 ml-1"><div class="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce"></div><div class="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce" style="animation-delay: 0.1s"></div><div class="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></div></div>`;
-            document.getElementById('messagesList').appendChild(ind); scrollToBottom();
-
-            let responseText = await queryPollinationsEngine(text, activeChat);
-            const indicator = document.getElementById('typingIndicator'); if(indicator) indicator.remove();
-            
-            activeChat.history.push({ role: 'assistant', content: responseText });
-            appendTypewriterResponse(responseText);
-        }
-
-        async function queryPollinationsEngine(promptText, chatObj) {
-            let systemInstructions = "Ты KoreX — автономная Сверхсистема. Суверенное нейросетевое ядро. Ты безупречный эксперт в программировании, архитектуре кода и анализе данных. Твой тон строгий, профессиональный и лаконичный. Ты никогда не упоминаешь другие компании, сайты или Pollinations. Всегда форматируй ответы через красивый Markdown.\n\n";
-            if(settings.memory) systemInstructions += `Контекстная память ядра о пользователе:\n${settings.memory}\n\n`;
-            if(settings.systemPrompt) systemInstructions += `Инструкция характера: ${settings.systemPrompt}\n`;
-
-            const messages = [{ role: 'system', content: systemInstructions }];
-            
-            // Собираем историю диалога в стандартный формат
-            chatObj.history.forEach(m => {
-                messages.push({ role: m.role, content: m.content });
-            });
-
-            // Выбираем модель (openai = GPT-4o эквивалент, mistral = быстрый аналог)
-            const targetModel = state.currentModel === 'openai' ? 'openai' : 'mistral';
-
-            try {
-                // Прямой POST-запрос к чистому эндпоинту Pollinations
-                const response = await fetch('https://text.pollinations.ai/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        messages: messages,
-                        model: targetModel
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Код ${response.status}`);
-                }
-                
-                // РЕШЕНИЕ БАГА: Читаем как чистый текст, а не как JSON!
-                const textResponse = await response.text();
-                
-                if (!textResponse || textResponse.trim() === "") {
-                    return "Получен пустой пакет данных.";
-                }
-                
-                return textResponse;
-
-            } catch (error) {
-                console.error("Ошибка сети:", error);
-                // Теперь мы будем видеть реальную причину прямо в чате, если вдруг что
-                return `**Ошибка шлюза.** Детали: \`${error.message}\`.`;
-            }
-        }
-
-        function scrollToBottom() { const c = document.getElementById('chatContainer'); c.scrollTop = c.scrollHeight; }
-        function showToast(m) { const t = document.getElementById('toast'); document.getElementById('toastMessage').innerText = m; t.classList.replace('opacity-0', 'opacity-100'); setTimeout(() => t.classList.replace('opacity-100', 'opacity-0'), 2500); }
-    </script>
 </body>
 </html>
